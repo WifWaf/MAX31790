@@ -1,5 +1,5 @@
 /****************************************************** 
-  Arduino library for MAX31790 Fan Controler
+  IDF library for MAX31790 Fan Controler
   
   Author: Jonathan Dempsey JDWifWaf@gmail.com  
   Version: 1.0.0
@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <esp_err.h>
 
 /* MAX31790 Addresses ---------------------- */
 #define MAX31790_DEF_ADDR               0x20    // 0x40 >> 1  ADD0: GND ADD1: GND
@@ -36,9 +37,9 @@
 #define MAX31790_FAN_CFG_SPIN_UP_2          0x40
 #define MAX31790_FAN_CFG_CON_MON_CON        0x00
 #define MAX31790_FAN_CFG_CON_MON_MON        0x10
-#define MAX31790_FAN_CFG_TACH_INPUT  	    0x08
-#define MAX31790_FAN_CFG_TACH_LOCK_TACH	    0x00
-#define MAX31790_FAN_CFG_TACH_LOCK_LOCK	    0x04
+#define MAX31790_FAN_CFG_TACH_INPUT  	     0x08
+#define MAX31790_FAN_CFG_TACH_LOCK_TACH	  0x00
+#define MAX31790_FAN_CFG_TACH_LOCK_LOCK	  0x04
 #define MAX31790_FAN_CFG_PWM_TACH_PWM       0x00
 #define MAX31790_FAN_CFG_PWM_TACH_TACH      0x01
 
@@ -48,16 +49,16 @@
 #define MAX31790_FAN_DYN_SR_4               0x40
 #define MAX31790_FAN_DYN_SR_8               0xC0
 #define MAX31790_FAN_DYN_SR_16              0x80
-#define MAX31790_FAN_DYN_SR_32	            0xA0
-#define MAX31790_FAN_DYN_SR_MASK	        0xE0
+#define MAX31790_FAN_DYN_SR_32	           0xA0
+#define MAX31790_FAN_DYN_SR_MASK	           0xE0
 
 #define MAX31790_FAN_DYN_PWM_ROC_0	        0x00
-#define MAX31790_FAN_DYN_PWM_ROC_1_9	    0x04
-#define MAX31790_FAN_DYN_PWM_ROC_3_9	    0x08
-#define MAX31790_FAN_DYN_PWM_ROC_7_8	    0x0C
-#define MAX31790_FAN_DYN_PWM_ROC_15_6	    0x10
-#define MAX31790_FAN_DYN_PWM_ROC_31_2	    0x14
-#define MAX31790_FAN_DYN_PWM_ROC_62_5	    0x18
+#define MAX31790_FAN_DYN_PWM_ROC_1_9	     0x04
+#define MAX31790_FAN_DYN_PWM_ROC_3_9	     0x08
+#define MAX31790_FAN_DYN_PWM_ROC_7_8	     0x0C
+#define MAX31790_FAN_DYN_PWM_ROC_15_6	     0x10
+#define MAX31790_FAN_DYN_PWM_ROC_31_2	     0x14
+#define MAX31790_FAN_DYN_PWM_ROC_62_5	     0x18
 #define MAX31790_FAN_DYN_PWM_ROC_125        0x1C
 #define MAX31790_FAN_DYN_PWM_ROC_MASK       0x1C
 
@@ -101,7 +102,7 @@
 /* MAX31790 Register -------------------------------- */
 // Core Bits //
 #define MAX31790_REG_TACH_COUNT(C)	        (0x18 + ((C) * 2))
-#define MAX31790_REG_PWM_DUTY(C)	        (0x30 + ((C) * 2))
+#define MAX31790_REG_PWM_DUTY(C)	           (0x30 + ((C) * 2))
 
 // Config Bits //
 #define MAX31790_REG_GLOBAL_CONFIG	        0x00
@@ -110,15 +111,15 @@
 #define MAX31790_REG_SEQ_START_CONFIG       0x14
 #define MAX31790_REG_FAILED_FAN_CONFIG      0x14
 #define MAX31790_REG_TARGET_DUTY(C)         (0x40 + ((C) * 2))
-#define MAX31790_REG_TARGET_COUNT(C)	    (0x50 + ((C) * 2))
+#define MAX31790_REG_TARGET_COUNT(C)	     (0x50 + ((C) * 2))
 #define MAX31790_REG_WINDOW(C)              (0x60 + (C))
 
 // Status Bits //
 #define MAX31790_REG_FREQ_START  	        0x01
-#define MAX31790_REG_FAN_FAULT_STATUS_2	    0x10
-#define MAX31790_REG_FAN_FAULT_STATUS_1	    0x11
-#define MAX31790_REG_FAN_FAULT_MASK_2	    0x12
-#define MAX31790_REG_FAN_FAULT_MASK_1	    0x13
+#define MAX31790_REG_FAN_FAULT_STATUS_2	  0x10
+#define MAX31790_REG_FAN_FAULT_STATUS_1	  0x11
+#define MAX31790_REG_FAN_FAULT_MASK_2	     0x12
+#define MAX31790_REG_FAN_FAULT_MASK_1	     0x13
 
 // User Bits //
 #define MAX31790_REG_USER_BYTE_0            0xE
@@ -142,8 +143,6 @@
 #define RPM_MIN			    120
 #define RPM_MAX			    7864320
 
-#define CHCK_TACH_CHAN(C)                     (((C) < NUM_TACH_CHANNEL) ? 1 : 0)
-#define CHCK_CHAN(C)                          (((C) < NUM_CHANNEL) ? 1 : 0)
 #define CALC_RPM_OR_BIT(X,SR,NP)              ((60 * (SR) * 8192)/((X) * (NP)))
 #define FAN_TO_CHAN(F)                        (((F) > 5) ? (F - 6) : F)
 #define CONSTRAIN(X, LOW, HIGH)               (((X) < (LOW)) ? (LOW) : ((X) > (HIGH) ? (HIGH) : (X)))
@@ -151,6 +150,9 @@
 #define REG_TO_LFTJST(N, MSB, LSB)            ((MSB) << ((N) - 8) | (LSB) >> (16 - (N)))
 #define LFTJST_TO_MSB(N, LJ)                  ((N) >> ((LJ) - 8))
 #define LFTJST_TO_LSB(N, LJ)                  ((N) << (16 - LJ))
+
+#define CHCK_TACH_CHAN(C)                     do {if((C) >= NUM_TACH_CHANNEL) return ESP_ERR_INVALID_ARG;} while(0)   
+#define CHCK_CHAN(C)                          do {if((C) >= NUM_CHANNEL) return ESP_ERR_INVALID_ARG;} while(0)  
 
 typedef struct
 {
@@ -162,126 +164,67 @@ typedef struct
    uint8_t fan_hallcount[NUM_TACH_CHANNEL];     // {3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3};
    uint8_t fault_mask_1;                        // 0x3f;
    uint8_t fault_mask_2;                        // 0x3f;
+   uint8_t write_buff[2];
+   uint8_t read_buff[2];
 } max31790_master_config_t;
 
-void MAX31790_read(uint8_t r_adr, uint8_t *r_data, uint8_t r_len);
-void MAX31790_write(uint8_t w_adr, uint8_t *w_data, uint8_t w_len);
+/* Utility -------------------------------------------------------------------------------- */
+float MAX31790_bits_to_fduty(uint16_t bits);
+uint16_t MAX31790_fduty_to_bits(float duty);
 
-float MAX31790_bits_to_fduty(uint16_t bits);    
-uint16_t fduty_to_bits(float duty);
-
-void MAX31790_initiate(max31790_master_config_t *cfg);     
+/* Setup ---------------------------------------------------------------------------------- */
+esp_err_t MAX31790_initiate(max31790_master_config_t *cfg);
 
 /* Set ------------------------------------------------------------------------------------ */
+esp_err_t MAX31790_set_master_config(max31790_master_config_t *cfg);
 
-void MAX31790_set_master_config(max31790_master_config_t *cfg, uint8_t *w_buff);
+esp_err_t MAX31790_set_target_dutybits(uint8_t channel, uint16_t dutybits);
 
-void MAX31790_set_target_dutybits(uint8_t channel, uint16_t dutybits);
+esp_err_t MAX31790_set_target_rpm(uint8_t channel, uint32_t RPM);               // When changing from PWM mode to RPM mode, best results are obtained by loading this register with the current TACH count before changing to RPM mode.
 
-void MAX31790_set_target_rpm(uint8_t channel, uint32_t RPM); //When changing from PWM mode to RPM mode, best results are obtained by loading this register with the current TACH count before changing to RPM mode.
+esp_err_t MAX31790_set_fault_mask(uint8_t fan_number);
 
-void MAX31790_set_fault_mask(uint8_t fan_number);
+esp_err_t inline MAX31790_set_target_duty(uint8_t channel, float fduty) { return MAX31790_set_target_dutybits(channel, MAX31790_fduty_to_bits(fduty)); };
 
-void inline MAX31790_set_target_duty(uint8_t channel, float fduty){
-    MAX31790_set_target_dutybits(channel, fduty_to_bits(fduty));
-};
+esp_err_t MAX31790_set_window(uint8_t cfg, uint8_t channel);
 
-void inline MAX31790_set_window(uint8_t *cfg, uint8_t channel){
-    if(CHCK_CHAN(channel))
-        MAX31790_write(MAX31790_REG_WINDOW(channel), cfg, 1);         
-};
+esp_err_t MAX31790_set_failed_fan_seq_start(uint8_t ff_ss);
 
-void inline MAX31790_set_failed_fan_seq_start(uint8_t *cfg){
-    MAX31790_write(MAX31790_REG_SEQ_START_CONFIG, cfg, 1);
-};
+esp_err_t MAX31790_set_global_config(uint8_t cfg);
 
-void inline MAX31790_set_global_config(uint8_t *cfg){
-    MAX31790_write(MAX31790_REG_GLOBAL_CONFIG, cfg, 1);
-};
+esp_err_t MAX31790_set_pwm_feq(uint8_t bit_freq);
 
-void inline MAX31790_set_pwm_feq(uint8_t *bit_freq){
-    MAX31790_write(MAX31790_REG_FREQ_START, bit_freq, 1);
-};
+esp_err_t MAX31790_set_fan_config(uint8_t fan_cfg, uint8_t channel);
 
-void inline MAX31790_set_fan_config(uint8_t *cfg, uint8_t channel){
-    if(CHCK_CHAN(channel))
-        MAX31790_write(MAX31790_REG_FAN_CONFIG(channel), cfg, 0);
-};
+esp_err_t MAX31790_set_fan_dynamic(uint8_t fan_dyn, uint8_t channel);
 
-void inline MAX31790_set_fan_dynamic(uint8_t *cfg, uint8_t channel){
-    if(CHCK_CHAN(channel))
-        MAX31790_write(MAX31790_REG_FAN_DYNAMIC(channel), cfg, 0);
-};
+/* Get ------------------------------------------------------------------------------------- */
+esp_err_t MAX31790_get_dutybits(uint8_t channel, bool isTarget, uint16_t *dutybits);
 
-/* Get ------------------------------------------------------------------------------------ */
-uint16_t MAX31790_get_dutybits(uint8_t channel, bool isTarget);
+esp_err_t MAX31790_get_rpm(uint8_t fan_number, bool isTarget, uint32_t *rpm);
 
-uint32_t MAX31790_get_rpm(uint8_t fan_number, bool isTarget, uint8_t *r_buff);
+esp_err_t MAX31790_get_global_config(uint8_t *gl_cfg); 
 
-uint8_t inline MAX31790_get_global_config(uint8_t *r_buff){
-    MAX31790_read(MAX31790_REG_GLOBAL_CONFIG, r_buff, 1);
-    return *r_buff;
-};
+esp_err_t inline MAX31790_get_target_dutybits(uint8_t channel, uint16_t *tar_dutybits){ return MAX31790_get_dutybits(channel, true, tar_dutybits); };
 
-uint8_t inline MAX31790_get_target_dutybits(uint8_t channel){
-    return MAX31790_get_dutybits(channel, true);    
-};
+esp_err_t MAX31790_get_duty(uint8_t channel, bool isTarget, float *fl_duty);
 
-float inline MAX31790_get_duty(uint8_t channel, bool isTarget){
-    return MAX31790_bits_to_fduty(MAX31790_get_dutybits(channel, isTarget));
-}
+esp_err_t MAX31790_get_target_duty(uint8_t channel, float *tar_duty);
 
-float inline MAX31790_get_target_duty(uint8_t channel){
-    return MAX31790_bits_to_fduty(MAX31790_get_dutybits(channel, true));    
-};
+esp_err_t inline MAX31790_get_target_tach(uint8_t fan_number, uint32_t *rpm){ return MAX31790_get_rpm(fan_number, true, rpm); };
 
-uint32_t inline MAX31790_get_target_tach(uint8_t channel, uint8_t *r_buff){
-    return MAX31790_get_rpm(channel, true, r_buff);
-};
+esp_err_t MAX31790_get_pwm_freq(uint8_t *pwm_freq);
 
-uint8_t inline MAX31790_get_pwm_freq(uint8_t *r_buff){
-    MAX31790_read(MAX31790_REG_FREQ_START, r_buff ,1);
-    return *r_buff;
-};
+esp_err_t MAX31790_get_failed_fan_seq_opt(uint8_t *ff_seq_opt);
 
-uint8_t inline MAX31790_get_failed_fan_seq_opt(uint8_t *r_buff){
-    MAX31790_read(MAX31790_REG_SEQ_START_CONFIG, r_buff, 1);
-    return *r_buff;
-};
+esp_err_t MAX31790_get_fan_config(uint8_t channel, uint8_t *fan_cfg);
 
-uint8_t inline MAX31790_get_fan_config(uint8_t channel, uint8_t *r_buff){
-    if(CHCK_CHAN(channel)) return 0;
+esp_err_t MAX31790_get_fan_dynamic(uint8_t channel, uint8_t *fan_dyn);
 
-    MAX31790_read(MAX31790_REG_FAN_CONFIG(channel), r_buff, 1);
-    return *r_buff; 
-};
+esp_err_t MAX31790_get_fault_mask(uint8_t num, uint8_t *f_mask);
 
-uint8_t inline MAX31790_get_fan_dynamic(uint8_t channel, uint8_t *r_buff){
-    if(!CHCK_CHAN(channel)) return 0;
+esp_err_t MAX31790_get_fault_status(uint8_t num, uint8_t *f_status);
 
-    MAX31790_read(MAX31790_REG_FAN_DYNAMIC(channel), r_buff, 1);
-    return *r_buff;
- };
-
-uint8_t inline MAX31790_get_fault_mask(uint8_t num, uint8_t *r_buff){ 
-    if(!CHCK_TACH_CHAN(num)) return 0;
-
-    ((num < 5) ? MAX31790_read(MAX31790_REG_FAN_FAULT_MASK_1, r_buff, 1) : MAX31790_read(MAX31790_REG_FAN_FAULT_MASK_2, r_buff, 1));
-    return *r_buff;         
-};
-
-uint8_t inline MAX31790_get_fault_status(uint8_t num, uint8_t *r_buff){ 
-    if(!CHCK_TACH_CHAN(num)) return 0;
-
-    ((num < 5) ? MAX31790_read(MAX31790_REG_FAN_FAULT_STATUS_1, r_buff, 1) : MAX31790_read(MAX31790_REG_FAN_FAULT_STATUS_2, r_buff, 1));
-    return *r_buff;           
-};
-
-uint8_t inline MAX31790_get_window(uint8_t cfg, uint8_t channel, uint8_t *r_buff){
-    if(!CHCK_CHAN(channel)) return 0;
-
-    MAX31790_read(MAX31790_REG_WINDOW(channel), r_buff, 1);    
-    return *r_buff;      
-};
+esp_err_t MAX31790_get_window(uint8_t cfg, uint8_t channel, uint8_t *window);
 
 #endif
