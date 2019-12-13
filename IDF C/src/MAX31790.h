@@ -147,9 +147,9 @@
 #define FAN_TO_CHAN(F)                        (((F) > 5) ? (F - 6) : F)
 #define CONSTRAIN(X, LOW, HIGH)               (((X) < (LOW)) ? (LOW) : ((X) > (HIGH) ? (HIGH) : (X)))
 #define MAP(X, I_MIN, I_MAX, O_MIN, O_MAX)    ((((X) - (I_MIN)) * ((O_MAX) - (O_MIN))) / (((I_MAX) - (I_MIN)) + (O_MIN)))
-#define REG_TO_LFTJST(N, MSB, LSB)            ((MSB) << ((N) - 8) | (LSB) >> (16 - (N)))
-#define LFTJST_TO_MSB(N, LJ)                  ((N) >> ((LJ) - 8))
-#define LFTJST_TO_LSB(N, LJ)                  ((N) << (16 - LJ))
+#define REG_TO_LFTJST(N, MSB, LSB)            (0xFFFF & ((MSB) << ((N) - 8) | (LSB) >> (16 - (N))))
+#define LFTJST_TO_MSB(N, LJ)                  (0xFF & ((N) >> ((LJ) - 8)))
+#define LFTJST_TO_LSB(N, LJ)                  (0xFF & ((N) << (16 - LJ)))
 
 #define CHCK_TACH_CHAN(C)                     do {if((C) >= NUM_TACH_CHANNEL) return ESP_ERR_INVALID_ARG;} while(0)   
 #define CHCK_CHAN(C)                          do {if((C) >= NUM_CHANNEL) return ESP_ERR_INVALID_ARG;} while(0)  
