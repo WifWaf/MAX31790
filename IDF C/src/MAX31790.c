@@ -5,11 +5,10 @@
 #include <math.h>
 #include <esp_log.h>
 
-static const char *TAG = "MAX31790";
-
-uint8_t sr_map[6] = {1, 2, 4, 8, 16, 32};
-
 static max31790_master_config_t *max31790_config;
+
+static const char *TAG = "MAX31790";
+static const uint8_t sr_map[6] = {1, 2, 4, 8, 16, 32};
 
 static esp_err_t MAX31790_write(uint8_t w_adr, uint8_t w_len);
 static esp_err_t MAX31790_read(uint8_t r_adr, uint8_t r_len);
@@ -17,19 +16,34 @@ static inline esp_err_t MAX31790_read8(uint8_t r_adr, uint8_t *ret_val);
 
 esp_err_t MAX31790_initiate(max31790_master_config_t *cfg)
 {
-   //esp_log_level_set(TAG, ESP_LOG_DEBUG);
+    esp_log_level_set(TAG, ESP_LOG_DEBUG);
     ESP_LOGD(TAG, "Initiate");
-    max31790_config = cfg;
 
-    return ESP_OK;
+    return MAX31790_set_master_config(cfg);
 }  
 
 /* Set --------------------------------------------------------------------------------------- */
 esp_err_t MAX31790_set_master_config(max31790_master_config_t *cfg)
 {
-   max31790_config = cfg;
+    max31790_config = cfg;
 
-   return ESP_OK;
+    esp_err_t err_ret = ESP_OK;
+
+    err_ret += MAX31790_set_global_config(max31790_config->global_cfg);
+    err_ret += MAX31790_set_failed_fan_seq_start(max31790_config->fan_failed_seq_start_cfg);
+
+    for(uint8_t x = 0; x < NUM_CHANNEL; x++)
+    {
+        err_ret += MAX31790_set_fan_config(max31790_config->fan_cfg[x], x);
+        err_ret += MAX31790_set_fan_dynamic(max31790_config->fan_dyn[x], x);
+    }
+
+    max31790_config->write_buff[0] = max31790_config->fault_mask_1;
+    err_ret += MAX31790_write(MAX31790_REG_FAN_FAULT_MASK_1, 1);
+    max31790_config->write_buff[0] = max31790_config->fault_mask_2;
+    err_ret += MAX31790_write(MAX31790_REG_FAN_FAULT_MASK_2, 1);
+    
+    return err_ret;
 }
 
 esp_err_t MAX31790_set_target_rpm(uint8_t channel, uint32_t RPM)
@@ -39,7 +53,6 @@ esp_err_t MAX31790_set_target_rpm(uint8_t channel, uint32_t RPM)
     CHCK_CHAN(channel);
 
     RPM = CONSTRAIN(RPM, RPM_MIN, RPM_MAX);
-
     calc = CALC_RPM_OR_BIT(RPM, sr_map[(MAX31790_FAN_DYN_SR_MASK & max31790_config->fan_dyn[channel]) >> 5], max31790_config->fan_hallcount[channel]);
 
     max31790_config->write_buff[0] = LFTJST_TO_MSB(calc, 11);
@@ -217,7 +230,7 @@ static esp_err_t MAX31790_write(uint8_t w_adr, uint8_t w_len)
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);    
 
-    ret_err += i2c_master_write_byte(cmd, (0x20 << 1) | I2C_MASTER_WRITE, true);
+    ret_err += i2c_master_write_byte(cmd, (max31790_config->adr << 1) | I2C_MASTER_WRITE, true);
     ret_err += i2c_master_write_byte(cmd, w_adr, true);
 
     ret_err += i2c_master_write(cmd, max31790_config->write_buff, w_len, true);
@@ -244,11 +257,11 @@ static esp_err_t MAX31790_read(uint8_t r_adr, uint8_t r_len)
     esp_err_t ret_err = ESP_OK;
 
     ret_err += i2c_master_start(cmd);
-    ret_err += i2c_master_write_byte(cmd, (0x20 << 1) | I2C_MASTER_WRITE, true);
+    ret_err += i2c_master_write_byte(cmd, (max31790_config->adr << 1) | I2C_MASTER_WRITE, true);
     ret_err += i2c_master_write_byte(cmd, r_adr, true);
 
     ret_err += i2c_master_start(cmd);
-    ret_err += i2c_master_write_byte(cmd, (0x20 << 1) | I2C_MASTER_READ, true);
+    ret_err += i2c_master_write_byte(cmd, (max31790_config->adr << 1) | I2C_MASTER_READ, true);
 
     if (r_len > 1)
         ret_err += i2c_master_read(cmd, max31790_config->read_buff, r_len-1, I2C_MASTER_ACK);
