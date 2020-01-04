@@ -65,11 +65,21 @@ void MAX31790::setTargetDuty(uint8_t channel, uint8_t duty)
 {
     uint16_t buff = 0;
 
-    if(CHCK_CHAN(channel))
+    if(CHCK_CHAN(channel)) 
     {
         duty = constrain(duty, 0, 100);
         buff = map(duty, 0, 100, 0, 511);
-        ESP_LOGD(TAG,"Set: Duty: %d Bit: %d", duty, buff);
+        write(MAX31790_REG_TARGET_DUTY(channel), buff, 9);        
+    }
+}
+
+void MAX31790::setTargetDutyBits(uint8_t channel, uint16_t duty)
+{
+    uint16_t buff = 0;
+
+    if(CHCK_CHAN(channel)) 
+    {
+        duty = constrain(duty, 0, 511);
         write(MAX31790_REG_TARGET_DUTY(channel), buff, 9);        
     }
 }
@@ -139,14 +149,14 @@ uint16_t MAX31790::read(uint8_t r_adr, uint8_t ljst)
     if(this->myWire->available())
     {   
         buff8 = this->myWire->read();
-       // ESP_LOGD(MAX31790,"Read(u8_1): 0x%02X", buff8);
+        ESP_LOGV(MAX31790,"Read(u8_1): 0x%02X", buff8);
         if(ljst)
         {
             buff16 |= (buff8 << (ljst - 8));
             buff8 = this->myWire->read();
-           // ESP_LOGD(MAX31790,"Read(u8_2): 0x%02X", buff8);
+            ESP_LOGV(MAX31790,"Read(u8_2): 0x%02X", buff8);
             buff16 |= (buff8 >> (16 - ljst));
-            //ESP_LOGD(MAX31790,"Read(ui16): 0x%03X", buff16);
+            ESP_LOGV(MAX31790,"Read(ui16): 0x%03X", buff16);
         }        
     }
     return ljst? buff16 : buff8;

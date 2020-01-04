@@ -7,7 +7,7 @@
  *******************************************************/
 
 #ifndef MAX31790_H
-#define MAX31790_h
+#define MAX31790_H
 
 #define TAG MAX31790
 
@@ -170,6 +170,8 @@ class MAX31790
         /* Set ------------------------------------------------------------------------------------ */
 
         void setMasterConfig(max31790_master_config_t *cfg);
+
+        void setTargetDutyBits(uint8_t channel, uint16_t duty);
 
         void setTargetDuty(uint8_t channel, uint8_t duty);
         
