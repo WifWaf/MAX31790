@@ -2,12 +2,10 @@
 
 MAX31790::MAX31790(uint8_t adr) : _adr(adr){}
 
-void MAX31790::begin(uint8_t sda, uint8_t sdl, TwoWire &inWire)
+void MAX31790::begin(TwoWire &inWire)
 {
-    this->_sda = sda; 
-    this->_sdl = sdl;
     this->myWire = &inWire;
-    this->myWire->begin(_sda,_sdl);
+    this->myWire->begin();
 }
 
 void MAX31790::setMasterConfig(max31790_master_config_t *cfg)

@@ -143,8 +143,8 @@
 #define RPM_MIN			    120
 #define RPM_MAX			    7864320
 
-#define CHCK_TACH_CHAN(C)           (((C) < NUM_TACH_CHANNEL) ? 1 : (ESP_LOGD(TAG,"Invalid Tach Channel Number: %d", (C)), 0))
-#define CHCK_CHAN(C)                (((C) < NUM_CHANNEL) ? 1 : (ESP_LOGD(TAG,"Invalid Channel Number: %d", (C)), 0))
+#define CHCK_TACH_CHAN(C)           (((C) < NUM_TACH_CHANNEL) ? 1 : 0)
+#define CHCK_CHAN(C)                (((C) < NUM_CHANNEL) ? 1 : 0)
 #define CALC_RPM_OR_BIT(X,SR,NP)    ((60 * (SR) * 8192)/((X) * (NP)))
 #define FAN_TO_CHAN(F)              (((F) > 5) ? (F - 6) : F)
 
@@ -164,7 +164,7 @@ class MAX31790
     public:
         MAX31790(uint8_t adr = 0x20);
 
-        void begin(uint8_t sda, uint8_t sdl, TwoWire &inWire = Wire);     
+        void begin(TwoWire &inWire = Wire);     
 
         /* Set ------------------------------------------------------------------------------------ */
 
@@ -271,8 +271,7 @@ class MAX31790
     private:
         TwoWire *myWire;
         
-        uint8_t _sda, _sdl;
-        uint8_t _adr;
+         uint8_t _adr;
         uint8_t sr_map[6] = {1, 2, 4, 8, 16, 32};
 
         max31790_master_config_t max31790_config;  
