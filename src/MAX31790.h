@@ -13,7 +13,6 @@
 
 #include <Arduino.h>
 #include <Wire.h>
-#include <esp32-hal-log.h>
 
 /* MAX31790 Addresses ---------------------- */
 #define MAX31790_DEF_ADDR               0x20    // 0x40 >> 1  ADD0: GND ADD1: GND

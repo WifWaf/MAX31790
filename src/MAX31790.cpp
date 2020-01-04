@@ -108,7 +108,6 @@ uint8_t MAX31790::getDuty(uint8_t channel, bool isTarget)
         calc = (uint16_t)map(calc, 0, 511, 0, 1000);
         calc /= 10;
         calc = round(calc);
-        ESP_LOGD(TAG,"Ret: %ld %%", (uint8_t)calc);
     }
 
     return (uint8_t)calc;
@@ -131,7 +130,6 @@ void MAX31790::write(uint8_t r_adr, uint16_t payload, uint8_t ljst)
         this->myWire->write(LSB);
     }
 
-    ESP_LOGV(MAX31790,"Write(ui16) Adr: 0x%02X MSB: 0x%02X LSB: 0x%02X", r_adr, MSB, LSB);
     this->myWire->endTransmission();
 }
 
@@ -149,14 +147,11 @@ uint16_t MAX31790::read(uint8_t r_adr, uint8_t ljst)
     if(this->myWire->available())
     {   
         buff8 = this->myWire->read();
-        ESP_LOGV(MAX31790,"Read(u8_1): 0x%02X", buff8);
         if(ljst)
         {
             buff16 |= (buff8 << (ljst - 8));
             buff8 = this->myWire->read();
-            ESP_LOGV(MAX31790,"Read(u8_2): 0x%02X", buff8);
             buff16 |= (buff8 >> (16 - ljst));
-            ESP_LOGV(MAX31790,"Read(ui16): 0x%03X", buff16);
         }        
     }
     return ljst? buff16 : buff8;
