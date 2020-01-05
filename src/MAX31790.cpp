@@ -1,3 +1,11 @@
+/****************************************************** 
+  Arduino library for MAX31790 Fan Controler
+  
+  Author: Jonathan Dempsey JDWifWaf@gmail.com  
+  Version: 1.0.1
+  License: Apache 2.0
+ *******************************************************/
+
 #include "MAX31790.h"
 
 MAX31790::MAX31790(uint8_t adr) : _adr(adr){}
@@ -36,9 +44,6 @@ uint32_t MAX31790::getRPM(uint8_t fan_number, bool isTarget)
 
     if(CHCK_TACH_CHAN(fan_number))
     {
-       // if((0x01 << channel) & getFaultStatus(channel))
-       //    return 0;
-
         buff = read((isTarget ? MAX31790_REG_TARGET_COUNT(FAN_TO_CHAN(fan_number)) : MAX31790_REG_TACH_COUNT(fan_number)),  11);        
         buff = CALC_RPM_OR_BIT(buff, sr_map[(MAX31790_FAN_DYN_SR_MASK & max31790_config.fan_dyn[FAN_TO_CHAN(fan_number)]) >> 5], max31790_config.fan_hallcount[fan_number]); 
     }
@@ -59,11 +64,11 @@ void MAX31790::setTargetTach(uint8_t channel, uint32_t RPM)
     }
 }
 
-void MAX31790::setTargetDuty(uint8_t channel, uint8_t duty)
+void MAX31790::setTargetDuty(uint8_t channel, float duty)
 {
     uint16_t buff = 0;
 
-    if(CHCK_CHAN(channel)) 
+    if(CHCK_CHAN(channel))
     {
         duty = constrain(duty, 0, 100);
         buff = map(duty, 0, 100, 0, 511);
@@ -73,12 +78,10 @@ void MAX31790::setTargetDuty(uint8_t channel, uint8_t duty)
 
 void MAX31790::setTargetDutyBits(uint8_t channel, uint16_t duty)
 {
-    uint16_t buff = 0;
-
-    if(CHCK_CHAN(channel)) 
+    if(CHCK_CHAN(channel))
     {
         duty = constrain(duty, 0, 511);
-        write(MAX31790_REG_TARGET_DUTY(channel), buff, 9);        
+        write(MAX31790_REG_TARGET_DUTY(channel), duty, 9);        
     }
 }
 
@@ -127,7 +130,6 @@ void MAX31790::write(uint8_t r_adr, uint16_t payload, uint8_t ljst)
         LSB = 0xFF & (payload << (16 - ljst));
         this->myWire->write(LSB);
     }
-
     this->myWire->endTransmission();
 }
 
@@ -135,12 +137,12 @@ uint16_t MAX31790::read(uint8_t r_adr, uint8_t ljst)
 {
     uint16_t buff16 = 0;
     uint8_t buff8 = 0;
-    
+
     this->myWire->beginTransmission(_adr);
     this->myWire->write(r_adr);
     this->myWire->endTransmission(false);
 
-     this->myWire->requestFrom(_adr, (uint8_t)(ljst ? 2 : 1));
+    this->myWire->requestFrom(_adr, (uint8_t)(ljst ? 2 : 1));
 
     if(this->myWire->available())
     {   
