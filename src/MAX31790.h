@@ -2,7 +2,7 @@
   Arduino library for MAX31790 Fan Controler
   
   Author: Jonathan Dempsey JDWifWaf@gmail.com  
-  Version: 1.0.0
+  Version: 1.0.1
   License: Apache 2.0
  *******************************************************/
 
@@ -24,9 +24,13 @@
 #define MAX31790_GLO_RESET_NORMAL           0x00
 #define MAX31790_GLO_RESET_RESET            0x40
 #define MAX31790_GLO_BUS_TIMEOUT_DIS        0x20
+#define MAX31790_GLO_BUS_TIMEOUT_EN         0x00
 #define MAX31790_GLO_OSC_INT                0x00
 #define MAX31790_GLO_OSC_EXT                0x08
-#define MAX31790_GLO_I2C_WD                 0x04
+#define MAX31790_GLO_I2C_WD_DIS             0x00
+#define MAX31790_GLO_I2C_WD_5               0x02
+#define MAX31790_GLO_I2C_WD_10              0x04
+#define MAX31790_GLO_I2C_WD_30              0x06
 #define MAX31790_GLO_I2C_WD_STATUS          0x01
 
 // Fan Config Bits //
@@ -85,6 +89,14 @@
 #define MAX31790_FAN_FAILED_SEQ_FFQ_6       0x04
 #define MAX31790_FAN_FAILED_SEQ_FFQ_MASK    0x04
 
+// Fan Fault //
+#define MAX31790_FAN_FAULT_1_7              0x01
+#define MAX31790_FAN_FAULT_2_8              0x02
+#define MAX31790_FAN_FAULT_3_9              0x04
+#define MAX31790_FAN_FAULT_4_10             0x08
+#define MAX31790_FAN_FAULT_5_11             0x16
+#define MAX31790_FAN_FAULT_6_12             0x32
+
 // PWM Freq Bits // 
 #define MAX31790_PWM_FREQ_25                0x00
 #define MAX31790_PWM_FREQ_30                0x01
@@ -96,8 +108,8 @@
 #define MAX31790_PWM_FREQ_1_47K             0x07
 #define MAX31790_PWM_FREQ_3_57K             0x08
 #define MAX31790_PWM_FREQ_5K                0x09
-#define MAX31790_PWM_FREQ_12_5K             0x10
-#define MAX31790_PWM_FREQ_25K               0x11
+#define MAX31790_PWM_FREQ_12_5K             0x0A
+#define MAX31790_PWM_FREQ_25K               0x0B
 
 /* MAX31790 Register -------------------------------- */
 // Core Bits //
@@ -191,8 +203,8 @@ class MAX31790
             write(MAX31790_REG_GLOBAL_CONFIG, cfg);
         };
         
-        void inline setPWMFreq(uint8_t group, uint8_t bit_freq) {
-            write(MAX31790_REG_FREQ_START, (uint8_t)(group ? (bit_freq << 4) : bit_freq));
+        void inline setFrequencyByte(uint8_t bit_freq) {
+            write(MAX31790_REG_FREQ_START, (uint8_t)(bit_freq));
         };
 
         void inline setFanConfig(uint8_t cfg, uint8_t channel) {
@@ -269,7 +281,7 @@ class MAX31790
 
     protected:
     private:
-        TwoWire *myWire;        
+        TwoWire *myWire; 
 
         uint8_t _adr;
         uint8_t sr_map[6] = {1, 2, 4, 8, 16, 32};
