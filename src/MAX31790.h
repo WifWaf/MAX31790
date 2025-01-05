@@ -1,7 +1,7 @@
-/****************************************************** 
+/******************************************************
   Arduino library for MAX31790 Fan Controler
-  
-  Author: Jonathan Dempsey JDWifWaf@gmail.com  
+
+  Author: Jonathan Dempsey JDWifWaf@gmail.com
   Version: 1.0.1
   License: Apache 2.0
  *******************************************************/
@@ -17,7 +17,7 @@
 /* MAX31790 Addresses ---------------------- */
 #define MAX31790_DEF_ADDR               0x20    // 0x40 >> 1  ADD0: GND ADD1: GND
 
-/* MAX31790 Options --------------------------------- */ 
+/* MAX31790 Options --------------------------------- */
 // Global Config Bits //
 #define MAX31790_GLO_RUN_STANDBY_RUN        0x00
 #define MAX31790_GLO_RUN_STANDBY_STANDBY    0x80
@@ -97,7 +97,7 @@
 #define MAX31790_FAN_FAULT_5_11             0x16
 #define MAX31790_FAN_FAULT_6_12             0x32
 
-// PWM Freq Bits // 
+// PWM Freq Bits //
 #define MAX31790_PWM_FREQ_25                0x00
 #define MAX31790_PWM_FREQ_30                0x01
 #define MAX31790_PWM_FREQ_35                0x02
@@ -176,7 +176,7 @@ class MAX31790
     public:
         MAX31790(uint8_t adr = 0x20);
 
-        void begin(TwoWire &inWire = Wire);     
+        void begin(TwoWire &inWire = Wire);
 
         /* Set ------------------------------------------------------------------------------------ */
 
@@ -185,14 +185,14 @@ class MAX31790
         void setTargetDuty(uint8_t channel, float duty);
 
         void setTargetDutyBits(uint8_t channel, uint16_t duty);
-        
-        void setTargetTach(uint8_t channel, uint32_t RPM); //When changing from PWM mode to RPM mode, best results are obtained by loading this register with the current TACH count before changing to RPM mode.
-        
+
+        void setTargetRPM(uint8_t channel, uint32_t RPM); //When changing from PWM mode to RPM mode, best results are obtained by loading this register with the current TACH count before changing to RPM mode.
+
         void setFaultMask(uint8_t fan_number);
 
         void inline setWindow(uint8_t cfg, uint8_t channel) {
             if(CHCK_CHAN(channel))
-                write(MAX31790_REG_WINDOW(channel), cfg);            
+                write(MAX31790_REG_WINDOW(channel), cfg);
         };
 
         void inline setFailedFanSeqStart(uint8_t cfg) {
@@ -202,7 +202,7 @@ class MAX31790
         void inline setGlobalConfig(uint8_t cfg) {
             write(MAX31790_REG_GLOBAL_CONFIG, cfg);
         };
-        
+
         void inline setFrequencyByte(uint8_t bit_freq) {
             write(MAX31790_REG_FREQ_START, (uint8_t)(bit_freq));
         };
@@ -227,10 +227,10 @@ class MAX31790
         };
 
         uint8_t getTargetDuty(uint8_t channel) {
-            return getDuty(channel, true);    
+            return getDuty(channel, true);
         };
 
-        uint32_t getTargetTach(uint8_t channel){
+        uint32_t getTargetRPM(uint8_t channel){
             return getRPM(channel, true);
         };
 
@@ -257,38 +257,38 @@ class MAX31790
         };
 
         uint8_t inline getFaultMask(uint8_t num)
-        { 
+        {
             if(CHCK_TACH_CHAN(num))
                 return ((num < 5) ? read(MAX31790_REG_FAN_FAULT_MASK_1) : read(MAX31790_REG_FAN_FAULT_MASK_2));
             else
-                return 0xFF;           
+                return 0xFF;
         };
 
         uint8_t inline getFaultStatus(uint8_t num)
-        { 
+        {
             if(CHCK_TACH_CHAN(num))
                 return ((num < 5) ? read(MAX31790_REG_FAN_FAULT_STATUS_1) : read(MAX31790_REG_FAN_FAULT_STATUS_2));
             else
-                return 0xFF;           
+                return 0xFF;
         };
 
         uint8_t inline getWindow(uint8_t cfg, uint8_t channel) {
             if(CHCK_CHAN(channel))
                return read(MAX31790_REG_WINDOW(channel));
             else
-                return 0xFF;          
+                return 0xFF;
         };
 
     protected:
     private:
-        TwoWire *myWire; 
+        TwoWire *myWire;
 
         uint8_t _adr;
         uint8_t sr_map[6] = {1, 2, 4, 8, 16, 32};
 
-        max31790_master_config_t max31790_config;  
+        max31790_master_config_t max31790_config;
 
         uint16_t read(uint8_t r_adr, uint8_t ljst = 0);
-        void write(uint8_t r_adr, uint16_t payload, uint8_t ljst = 0);      
+        void write(uint8_t r_adr, uint16_t payload, uint8_t ljst = 0);
 };
 #endif
