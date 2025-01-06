@@ -45,35 +45,28 @@ uint32_t MAX31790::getRPM(uint8_t fan_number, bool isTarget)
     if(CHCK_TACH_CHAN(fan_number))
     {
         buff = read((isTarget ? MAX31790_REG_TARGET_COUNT(FAN_TO_CHAN(fan_number)) : MAX31790_REG_TACH_COUNT(fan_number)),  11);
-
-        if (!isTarget && buff >= 2047)
-            return 0;
-
         buff = CALC_RPM_OR_BIT(buff, sr_map[(MAX31790_FAN_DYN_SR_MASK & max31790_config.fan_dyn[FAN_TO_CHAN(fan_number)]) >> 5], max31790_config.fan_hallcount[fan_number]);
 
-        if (isTarget && buff >= 2047)
+        if (buff == 480)
             return 0;
     }
 
     return buff;
 }
 
-
 void MAX31790::setTargetRPM(uint8_t channel, uint32_t RPM)
 {
-    uint16_t buff = 0;
-    uint16_t min_rpm = 0;
-
     if(CHCK_CHAN(channel))
     {
-        // Determine minimum RPM value for given sample rate and hallcount. +1 to avoid divisions by zero to avoid the tach register value = 2048.
-        min_rpm = CALC_RPM_OR_BIT(2048, sr_map[(MAX31790_FAN_DYN_SR_MASK & max31790_config.fan_dyn[channel]) >> 5], max31790_config.fan_hallcount[channel]) + 1;
-        RPM = constrain(RPM, min_rpm, RPM_MAX);
+        // Determine minimum RPM value for given sample rate and hallcount.
+        uint16_t min_rpm = CALC_RPM_OR_BIT(2048, sr_map[(MAX31790_FAN_DYN_SR_MASK & max31790_config.fan_dyn[channel]) >> 5], max31790_config.fan_hallcount[channel]);
+        RPM = constrain(RPM, min_rpm + 1, RPM_MAX);
 
-        buff = CALC_RPM_OR_BIT(RPM, sr_map[(MAX31790_FAN_DYN_SR_MASK & max31790_config.fan_dyn[channel]) >> 5], max31790_config.fan_hallcount[channel]);
-        write(MAX31790_REG_TARGET_COUNT(channel), buff, 11);
+        uint16_t bits = CALC_RPM_OR_BIT(RPM, sr_map[(MAX31790_FAN_DYN_SR_MASK & max31790_config.fan_dyn[channel]) >> 5], max31790_config.fan_hallcount[channel]);
+        write(MAX31790_REG_TARGET_COUNT(channel), bits, 11);
     }
 }
+
 
 void MAX31790::setTargetDuty(uint8_t channel, float duty)
 {

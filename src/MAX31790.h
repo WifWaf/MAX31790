@@ -157,7 +157,7 @@
 
 #define CHCK_TACH_CHAN(C)           (((C) < NUM_TACH_CHANNEL) ? 1 : 0)
 #define CHCK_CHAN(C)                (((C) < NUM_CHANNEL) ? 1 : 0)
-#define CALC_RPM_OR_BIT(X,SR,NP)    ((60 * (SR) * 8192)/((X) * (NP)))
+#define CALC_RPM_TO_BIT(X,SR,NP)    ((60 * (SR) * 8192) / (uint64_t)((X) * (NP)))
 #define FAN_TO_CHAN(F)              (((F) > 5) ? (F - 6) : F)
 
 typedef struct
